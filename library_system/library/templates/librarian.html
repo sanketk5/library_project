@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% if status == 'OK' %}
+<div class="container">
+    <h4>Librarian page</h4>
+    <button class='btn btn-danger logout_btn'>Logout</button>
+    <div id="books_div">
+        <h3>Books</h3>
+        <ul id="books_table"></ul>
+        <button class='btn btn-info add_book_btn'>Add book</button>
+    </div>
+
+    <div class="col-12 mb-3" id="book_div" style="display:none;">
+        <h3 id="form_line"></h3>
+        <form id="book_form" data-type="">
+            <div class="form-group">
+                <input type="hidden" id="form_book_id">
+                <input type="text" class="form-control" id="form_book_name" placeholder="Book name">
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="form_book_author" placeholder="Author name">
+            </div>
+            <button class="btn btn-primary" type="submit">Save</button>
+        </form>
+    </div>
+
+    <div id="users_div">
+        <h3>Users</h3>
+        <ul id="users_table"></ul>
+        <button class='btn btn-info add_user_btn'>Add User</button>
+    </div>
+    <div class="col-12 mb-3" id="user_div" style="display:none;">
+        <h3 id="user_form_line"></h3>
+        <form id="user_form" data-type="">
+            <div class="form-group">
+                <input type="hidden" id="form_user_id">
+                <input type="text" class="form-control" id="form_user_name" placeholder="User name">
+            </div>
+            <button class="btn btn-primary" type="submit">Save</button>
+        </form>
+    </div>
+    <div id="signup" class="mb-4" style="display:none;">
+        <h2>Add user</h2>
+        <form id="signup_form">
+            <div class="form-group">
+                <input type="text" class="form-control" id="first_name" placeholder="Name">
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="username" placeholder="Email">
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" id="password" placeholder="Password">
+            </div>
+            <div class="form-group">
+                <select class="form-control" id="signup-role">
+                    <option value="LIBRARIAN">Librarian</option>
+                    <option value="MEMBER">Member</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Sign Up</button>
+        </form>
+    </div>
+    <div id="user_history_div">
+        <h3>User history List</h3>
+        <ul id="user_history_table"></ul>
+    </div>
+</div>
+<script>
+    show_all_books()
+    function show_all_books(){
+        $.ajax({
+            url:`/library/book/`,
+            method:'GET',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success:function(data){
+                if (Object.keys(data).length){
+                    $('#books_table').empty()
+                    $('#books_table').append(`
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Book</th>
+                                    <th>Author</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id='books_table_body'></tbody>
+                        </table>
+
+                        `)
+                    data.forEach(function(book){
+                        $('#books_table_body').append(`
+                            <tr>
+                                <td>${book.name}</td>
+                                <td>${book.author}</td>
+                                <td>${book.status}</td>
+                                <td>
+                                    <button class='btn btn-warning update_book_btn' data-id='${book.id}'
+                                    data-name='${book.name}' data-author='${book.author}' data-status='${book.status}'>Update</button>
+                                    <button class='btn btn-danger remove_book_btn' data-id='${book.id}'>Remove</button>
+                                </td>
+                            </tr>
+                        `)
+                    });
+                    $('.remove_book_btn').on('click', function(){
+                        let book_id = $(this).attr('data-id')
+                        $.ajax({
+                            url:`/library/book/${book_id}/`,
+                            method:'DELETE',
+                            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+                            success:function(data){
+                                alert('Book deleted succesfully.')
+                                show_all_books()
+                            },
+                            error:function(data){
+                                console.log(data)
+                            }
+                        })
+                    })
+                    $('.update_book_btn').on('click', function(){
+                        $('#book_div').css('display', 'block')
+                        $('#form_line').text('Update book')
+                        $('#book_form').attr('data-type', 'update')
+                        $('#form_book_id').val($(this).attr('data-id'))
+                        $('#form_book_name').val($(this).attr('data-name'))
+                        $('#form_book_author').val($(this).attr('data-author'))
+                    })
+                }
+            },
+            error:function(data){
+                console.log(data)
+            }
+        });
+    }
+    $('#book_form').submit(function(e){
+        e.preventDefault();
+        let form_type = $(this).attr('data-type')
+        let name = $('#form_book_name').val()
+        let author = $('#form_book_author').val()
+        if (form_type === 'update'){
+            let book_id = $('#form_book_id').val()
+            $.ajax({
+                url:`/library/book/${book_id}/`,
+                method:'PUT',
+                headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+                data:{'name':name, 'author':author},
+                success:function(data){
+                    alert('Book updated succesfully.')
+                    show_all_books()
+                    $('#book_div').css('display', 'none')
+                },
+                error:function(data){
+                    console.log(data)
+                }
+            })
+        }else{
+            $.ajax({
+                url:`/library/book/`,
+                method:'POST',
+                headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+                data:{'name':name, 'author':author},
+                success:function(data){
+                    alert('Book Added succesfully.')
+                    show_all_books()
+                    $('#book_div').css('display', 'none')
+                },
+                error:function(data){
+                    console.log(data)
+                }
+            })
+        }
+    })
+    $('.add_book_btn').on('click', function(){
+        $('#book_div').css('display', 'block')
+        $('#form_line').text('Add book')
+        $('#book_form').attr('data-type', 'add')
+        $('#form_book_id').val('')
+        $('#form_book_name').val('')
+        $('#form_book_author').val('')
+    })
+
+    // user operation section
+    show_all_users()
+    function show_all_users(){
+        $.ajax({
+            url:`/library/users/`,
+            method:'GET',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success:function(data){
+                if (Object.keys(data).length){
+                    $('#users_table').empty()
+                    $('#users_table').append(`
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id='users_table_body'></tbody>
+                        </table>
+
+                        `)
+                    data.forEach(function(user){
+                        let user_str = `
+                            <tr>
+                                <td>${user.first_name}</td>
+                                <td>${user.username}</td>
+                        `;
+                        if (user.is_active == true){
+                            user_str += `
+                            <td>Active</td>
+                            <td>
+                                <button class='btn btn-warning update_user_btn' data-id='${user.id}'
+                                data-name='${user.first_name}' data-pwd='${user.password}' data-email='${user.username}'>Update3</button>
+                                <button class='btn btn-danger remove_user_btn' data-id='${user.id}'>Remove</button>
+                            </td>`
+                        }else{
+                            user_str += `<td>Deleted</td><td>--</td>`
+                        }
+                        user_str += `</tr>`
+                        $('#users_table_body').append(user_str);
+                    });
+                    $('.remove_user_btn').on('click', function(){
+                        let user_id = $(this).attr('data-id')
+                        $.ajax({
+                            url:`/library/users/remove_account/`,
+                            method:'PATCH',
+                            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+                            data:{'user_id':user_id},
+                            success:function(data){
+                                alert('User deleted succesfully.')
+                                show_all_users()
+                            },
+                            error:function(data){
+                                console.log(data)
+                            }
+                        })
+                    })
+                    $('.update_user_btn').on('click', function(){
+                        $('#user_div').css('display', 'block')
+                        $('#user_form_line').text('Update User')
+                        $('#user_form').attr('data-type', 'update')
+                        $('#form_user_id').val($(this).attr('data-id'))
+                        $('#form_user_name').val($(this).attr('data-name'))
+                    })
+                }
+            },
+            error:function(data){
+                console.log(data)
+            }
+        });
+    }
+    $('#user_form').submit(function(e){
+        e.preventDefault();
+        let form_type = $(this).attr('data-type')
+        let form_user_id = $('#form_user_id').val()
+        let name = $('#form_user_name').val()
+        if (form_type === 'update'){
+            let user_id = $('#form_user_id').val()
+            $.ajax({
+                url:`/library/users/update_user/`,
+                method:'POST',
+                headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+                data:{'first_name':name, 'user_id':form_user_id},
+                success:function(data){
+                    alert('User updated succesfully.')
+                    show_all_users()
+                    $('#user_div').css('display', 'none')
+                },
+                error:function(data){
+                    console.log(data)
+                }
+            })
+        }else{
+            $.ajax({
+                url:`/library/book/`,
+                method:'POST',
+                headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+                data:{'name':name, 'author':author},
+                success:function(data){
+                    alert('Book Added succesfully.')
+                    show_all_books()
+                    $('#user_div').css('display', 'none')
+                },
+                error:function(data){
+                    console.log(data)
+                }
+            })
+        }
+    })
+    $('.add_user_btn').on('click', function(){
+        $('#signup').css('display', 'block')
+        $('#signup_form').submit(function(e) {
+            e.preventDefault();
+            let first_name = $('#first_name').val();
+            let username = $('#username').val();
+            let password = $('#password').val();
+            let role = $('#signup-role').val();
+            $.ajax({
+                url: '/library/users/register/',
+                method: 'POST',
+                data: {first_name:first_name, username: username, password: password, role: role },
+                success: function(response) {
+                    alert('User added Successful');
+                    $('#user_div').css('display', 'none')
+                },
+                error: function(error) {
+                    console.error(error);
+                }
+            });
+        });
+    })
+    load_all_history()
+    function load_all_history() {
+        $.ajax({
+            url:`/library/transaction/all_history/`,
+            method:'GET',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success: function(response) {
+                $('#history-list').empty();
+                response.forEach(function(transaction) {
+                    $('#history-list').append(`<li class="list-group-item">${transaction.book.title} issued on ${transaction.issue_date} returned on ${transaction.return_date}</li>`);
+                });
+            },
+            success:function(data){
+                    //$('#books_history_table').empty()
+                    $('#user_history_table').empty()
+                    if (Object.keys(data).length){
+                        $('#user_history_table').append(`
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Book</th>
+                                    <th>Issue date</th>
+                                    <th>Return date</th>
+                                </tr>
+                            </thead>
+                            <tbody id='user_history_table_body'></tbody>
+                        </table>
+
+                        `)
+                        data.forEach(function(book){
+                            $('#user_history_table_body').append(`
+                                <tr>
+                                    <td>${book.user.username}</td>
+                                    <td>${book.book.name} by ${book.book.author}</td>
+                                    <td>${book.issue_date}</td>
+                                    <td>${book.return_date ? book.return_date:'--'}</td>
+                                </tr>
+                            `)
+                        });
+                    }else{
+                        $('#books_history_table').append(`<p>No records</p>`)
+                        $('#user_history_table').append(`<p>No records</p>`)
+                    }
+            },
+            error: function(error) {
+                console.error(error);
+            }
+        });
+    }
+    $('.logout_btn').on('click', function(){
+        $.ajax({
+            url:`/library/usr_logout/`,
+            method:'GET',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success:function(data){
+                alert('Logout Successful');
+                let url = window.location.href
+                url = url.replace('librarian', 'home')
+                window.location.href = url
+            },
+            error: function(error) {
+                console.error(error);
+            }
+        });
+    })
+
+</script>
+{% else %}
+<h4>Unauthorised request</h4>
+{% endif %}
+{% endblock %}

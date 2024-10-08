@@ -1,0 +1,34 @@
+
+
+
++-------------------------+
+| User                    |
++-------------------------+
+| id (Primary Key)        |
+| role                    |
+| groups (ManyToMany)     |
+| user_permissions        |
++-------------------------+
+        |
+        |  (One-to-Many)
+        V
++-------------------------+
+| Transaction             |
++-------------------------+
+| id (Primary Key)        |
+| user_id (Foreign Key)   |
+| book_id (Foreign Key)   |
+| issue_date              |
+| return_date             |
++-------------------------+
+        |
+        |  (Many-to-One)
+        V
++-------------------------+
+| Book                    |
++-------------------------+
+| id (Primary Key)        |
+| name                    |
+| author                  |
+| status                  |
++-------------------------+

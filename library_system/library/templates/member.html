@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Member page</h1>
+    <button class='btn btn-danger logout_btn'>Logout</button>
+    <button class="btn btn-danger delete_acc">Delete my account</button>
+    <div id="books_div">
+        <h3>Books List</h3>
+        <ul id="books_table"></ul>
+    </div>
+    <div id="books_history_div">
+        <h3>Books borrowed List</h3>
+        <ul id="books_history_table"></ul>
+    </div>
+    <div id="user_history_div">
+        <h3>User books history List</h3>
+        <ul id="user_history_table"></ul>
+    </div>
+</div>
+<script>
+    function show_books() {
+        $.ajax({
+            url:'/library/book/',
+            method:'GET',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success:function(data){
+                $('#books_table').empty()
+
+                data.forEach(function(book){
+                    if (book.status === 'AVAILABLE'){
+                        $('#books_table').append(`<li style='display: flex;justify-content: space-between;' class="list-group-item">${book.name} by ${book.author}
+                        <button class='borrow-btn btn btn-primary' onclick='borrow_book(this)' data-id='${book.id}' style='margin-left:auto;'>Borrow</button>
+                        </li>`)
+                    }
+                });
+            },
+            error:function(data){
+                console.log('error data')
+            }
+        });
+    }
+    function show_user_history() {
+        $.ajax({
+            url:'/library/transaction/history/',
+            method:'GET',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success:function(data){
+                    $('#books_history_table').empty()
+                    $('#user_history_table').empty()
+                    if (Object.keys(data).length){
+                        $('#user_history_table').append(`
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Book</th>
+                                    <th>Issue date</th>
+                                    <th>Return date</th>
+                                </tr>
+                            </thead>
+                            <tbody id='user_history_table_body'></tbody>
+                        </table>
+
+                        `)
+                        data.forEach(function(book){
+                            if (book.book.status == 'BORROWED'){
+                                $('#books_history_table').append(`<li style='display: flex;justify-content: space-between;' class="list-group-item">${book.book.name} by ${book.book.author}
+                                <button class='return-btn btn btn-primary' onclick='return_book(this)' data-id='${book.id}' style='margin-left:auto;'>Return</button>
+                                </li>`)
+                            }
+                            $('#user_history_table_body').append(`
+                                <tr>
+                                    <td>${book.book.name} by ${book.book.author}</td>
+                                    <td>${book.issue_date}</td>
+                                    <td>${book.return_date ? book.return_date:'--'}</td>
+                                </tr>
+                            `)
+                        });
+                    }else{
+                        $('#books_history_table').append(`<p>No records</p>`)
+                        $('#user_history_table').append(`<p>No records</p>`)
+                    }
+            },
+            error:function(data){
+                console.log('error data')
+            }
+        });
+    }
+    show_books();
+    show_user_history();
+    function borrow_book(button){
+        let book_id = $(button).attr('data-id')
+        $.ajax({
+            url:'/library/transaction/borrow_book/',
+            method:'POST',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            data: {'book_id':book_id},
+            success:function(data){
+                alert('Book borrowed succesfully')
+                show_books()
+                show_user_history();
+            },
+            error:function(data){
+                console.log(data)
+            }
+        });
+    }
+    function return_book(button){
+        let transaction_id = $(button).attr('data-id')
+        $.ajax({
+            url:`/library/transaction/return_book/`,
+            method:'POST',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            data: {'transaction_id':transaction_id},
+            success:function(data){
+                alert('Book returned succesfully')
+                show_books()
+                show_user_history()
+            },
+            error:function(data){
+                console.log(data)
+            }
+        });
+    }
+    $('.delete_acc').on('click', function(){
+        $.ajax({
+            url:`/library/users/remove_account/`,
+            method:'PATCH',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success:function(data){
+                alert('Account deleted succesfully')
+                let url = window.location.href
+                url = url.replace('member', 'home')
+                window.location.href = url
+            },
+            error:function(data){
+                console.log(data)
+            }
+        });
+    })
+    $('.logout_btn').on('click', function(){
+        $.ajax({
+            url:`/library/usr_logout/`,
+            method:'GET',
+            headers:{Authorization: `Bearer ${localStorage.getItem('access_token')}`},
+            success:function(data){
+                alert('Logout Successful');
+                let url = window.location.href
+                url = url.replace('librarian', 'home')
+                window.location.href = url
+            },
+            error: function(error) {
+                console.error(error);
+            }
+        });
+    })
+</script>
+{% endblock %}
